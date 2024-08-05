@@ -22,7 +22,7 @@ if os.getenv('AUTH_TYPE') == 'basic_auth':
 
 
 @app.before_request
-def before_request():
+def before_req():
     """"""
     if auth is None:
         return
