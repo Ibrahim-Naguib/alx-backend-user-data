@@ -30,9 +30,9 @@ def before_request():
     if not auth.require_auth(request.path, paths):
         return
     if auth.authorization_header(request) is None:
-        return abort(401)
+        abort(401)
     if auth.current_user(request) is None:
-        return abort(403)
+        abort(403)
 
 
 @app.errorhandler(404)
