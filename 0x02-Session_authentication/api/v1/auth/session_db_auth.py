@@ -4,6 +4,11 @@ Define class SessionDButh
 """
 from .session_exp_auth import SessionExpAuth
 from models.user_session import UserSession
+from datetime import (
+    datetime,
+    timedelta
+)
+from models.base import TIMESTAMP_FORMAT
 
 
 class SessionDBAuth(SessionExpAuth):
@@ -11,6 +16,9 @@ class SessionDBAuth(SessionExpAuth):
     Definition of SessionDBAuth class that persists session data
     in a database
     """
+    def __init__(self):
+        super().__init__()
+        UserSession.load_from_file()
 
     def create_session(self, user_id=None):
         """
@@ -23,7 +31,7 @@ class SessionDBAuth(SessionExpAuth):
             return None
         kw = {
             "user_id": user_id,
-            "session_id": session_id
+            "session_id": session_id,
         }
         user = UserSession(**kw)
         user.save()
@@ -37,10 +45,28 @@ class SessionDBAuth(SessionExpAuth):
         Return:
             user id or None if session_id is None or not a string
         """
-        user_id = UserSession.search({"session_id": session_id})
-        if user_id:
-            return user_id
-        return None
+        if session_id is None:
+            return None
+        
+        user_sessions = UserSession.search({"session_id": session_id})
+        if not user_sessions:
+            return None
+        
+        user_session = user_sessions[0]
+        
+        created_at = user_session.created_at
+        if isinstance(created_at, str):
+            created_at = datetime.strptime(created_at, TIMESTAMP_FORMAT)
+        
+        if self.session_duration <= 0:
+            return user_session.user_id
+        
+        allowed_window = created_at + timedelta(seconds=self.session_duration)
+        if allowed_window < datetime.now():
+            user_session.remove()
+            return None
+        
+        return user_session.user_id
 
     def destroy_session(self, request=None):
         """
